@@ -1,0 +1,116 @@
+
+body,html{
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    height: 100%;
+
+}
+
+.formcontainer{
+    background: linear-gradient(135deg,#cfcad3,#4169e1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height:100% ;
+
+}
+.content1{
+    text-align: center;
+    background-color: rgba(255,255, 255, 0.9);
+    padding: 2rem;
+    border-radius: 10px;
+     max-width: 400px;
+   
+
+}
+.content{
+    text-align: center;
+    background-color: rgba(255,255, 255, 0.9);
+    padding: 2rem;
+    border-radius: 10px;
+   width: 400px;
+    height: 430px;
+    
+    }
+
+h1{
+    color: #333;
+        margin-bottom: 20px;
+
+}
+
+p{
+    color: #666;
+    margin-bottom: 20px;
+}
+
+form{
+    display: flex;
+    flex-direction: column;
+
+}
+label{
+    text-align: start;
+}
+
+button{
+    padding: 0.5rem;
+    background-color:#bba2cf;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.5s ease-in-out;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.9);
+}
+.container {
+   
+    margin: 0 auto;
+    padding-top: 20px;}
+
+button:hover{
+    background-color: #1f1f1f;
+}
+
+
+h2 {
+    text-align: center;
+}
+
+input[type="email"], input[type="password"],input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+
+
+.health-data {
+    background-color: #fff;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.chart-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.prescription {
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+
+.toggle-btn {
+    text-align: center;
+    margin-top: 15px;
+    cursor: pointer;
+}

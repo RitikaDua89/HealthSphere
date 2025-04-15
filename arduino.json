@@ -1,0 +1,7 @@
+{
+    "arduino.path": "c:\\Users\\91870\\OneDrive\\Documents\\Arduino",
+      "board": "arduino:avr:uno",
+      "port": "COM8",  
+      "sketch": "your_sketch.ino"
+    
+  }
