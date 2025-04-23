@@ -1,4 +1,5 @@
 
+# new 2
 
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
@@ -6,10 +7,12 @@ import random
 import time
 from threading import Thread
 import sqlite3
+import datetime
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)  # Enable CORS for all routes
-#
+# Set CORS to allow requests from the frontend
+CORS(app, resources={r"/*": {"origins": "*"}})
+
 # Database setup
 def init_db():
     conn = sqlite3.connect('health_data.db')
@@ -35,6 +38,11 @@ def init_db():
     conn.close()
 
 init_db()
+
+# Health check endpoint to verify server is running
+@app.route('/api/health-check', methods=['GET'])
+def health_check():
+    return jsonify({"status": "ok"}), 200
 
 # Simulated sensor data (replace with actual sensor reading code)
 class SensorSimulator:
@@ -67,17 +75,22 @@ class SensorSimulator:
     
     def get_data(self):
         return {
-            'heart_rate': self.heart_rate,
-            'oxygen_level': self.oxygen_level,
-            'temperature': self.temperature
+            'heart_rate': int(self.heart_rate),
+            'oxygen_level': round(self.oxygen_level, 2),
+            'temperature': round(self.temperature, 2)
         }
 
 sensor_simulator = SensorSimulator()
 sensor_simulator.start_simulation()
 
 # User authentication
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST', 'OPTIONS'])
 def login():
+    # Handle preflight requests
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        return response
+        
     data = request.json
     if not data:
         return jsonify({'success': False, 'message': 'Missing JSON data'}), 400
@@ -101,9 +114,13 @@ def login():
         print("Login failed for:", email)
         return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
 
-
-@app.route('/signup', methods=['POST'])
+@app.route('/signup', methods=['POST', 'OPTIONS'])
 def signup():
+    # Handle preflight requests
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        return response
+        
     data = request.json
     fullname = data.get('fullname')
     email = data.get('email')
@@ -122,8 +139,13 @@ def signup():
         return jsonify({'success': False, 'message': 'Email already exists'}), 400
 
 # Health data endpoints
-@app.route('/api/health-data', methods=['GET'])
+@app.route('/api/health-data', methods=['GET', 'OPTIONS'])
 def get_health_data():
+    # Handle preflight requests
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        return response
+        
     user_id = request.args.get('user_id')
     if not user_id:
         return jsonify({'error': 'user_id parameter is required'}), 400
@@ -131,197 +153,129 @@ def get_health_data():
     sensor_data = sensor_simulator.get_data()
     
     # Store the data in database
-    conn = sqlite3.connect('health_data.db')
-    c = conn.cursor()
-    c.execute("INSERT INTO health_data (user_id, heart_rate, oxygen_level, temperature) VALUES (?, ?, ?, ?)",
-             (user_id, sensor_data['heart_rate'], sensor_data['oxygen_level'], sensor_data['temperature']))
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect('health_data.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO health_data (user_id, heart_rate, oxygen_level, temperature) VALUES (?, ?, ?, ?)",
+                (user_id, sensor_data['heart_rate'], sensor_data['oxygen_level'], sensor_data['temperature']))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error storing health data: {e}")
+    
     return jsonify(sensor_data)
 
-@app.route('/api/historical-data', methods=['GET'])
+@app.route('/api/historical-data', methods=['GET', 'OPTIONS'])
 def get_historical_data():
+    # Handle preflight requests
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        return response
+        
     user_id = request.args.get('user_id')
     limit = request.args.get('limit', 10)
     
-    conn = sqlite3.connect('health_data.db')
-    c = conn.cursor()
-    c.execute("SELECT timestamp, heart_rate, oxygen_level, temperature FROM health_data WHERE user_id=? ORDER BY timestamp DESC LIMIT ?", 
-             (user_id, limit))
-    data = c.fetchall()
-    conn.close()
-    
-    # Format data for chart
-    labels = [row[0] for row in reversed(data)]
-    heart_rates = [row[1] for row in reversed(data)]
-    oxygen_levels = [row[2] for row in reversed(data)]
-    temperatures = [row[3] for row in reversed(data)]
-    
-    return jsonify({
-        'labels': labels,
-        'heart_rates': heart_rates,
-        'oxygen_levels': oxygen_levels,
-        'temperatures': temperatures
-    })
+    try:
+        conn = sqlite3.connect('health_data.db')
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT timestamp, heart_rate, oxygen_level, temperature FROM health_data WHERE user_id=? ORDER BY timestamp DESC LIMIT ?", 
+                (user_id, limit))
+        data = c.fetchall()
+        conn.close()
+        
+        # Format data for chart
+        if not data:
+            # Return empty data structure for new users
+            return jsonify({
+                'labels': [],
+                'heart_rates': [],
+                'oxygen_levels': [],
+                'temperatures': []
+            })
+        
+        # Format timestamps to be more readable
+        labels = []
+        for row in reversed(data):
+            try:
+                # Try to parse the timestamp
+                dt = datetime.datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
+                labels.append(dt.strftime('%H:%M:%S'))
+            except:
+                # If parsing fails, just use the raw timestamp
+                labels.append(str(row[0]))
+        
+        heart_rates = [row[1] for row in reversed(data)]
+        oxygen_levels = [row[2] for row in reversed(data)]
+        temperatures = [row[3] for row in reversed(data)]
+        
+        return jsonify({
+            'labels': labels,
+            'heart_rates': heart_rates,
+            'oxygen_levels': oxygen_levels,
+            'temperatures': temperatures
+        })
+    except Exception as e:
+        print(f"Error fetching historical data: {e}")
+        return jsonify({
+            'labels': [],
+            'heart_rates': [],
+            'oxygen_levels': [],
+            'temperatures': [],
+            'error': str(e)
+        }), 500
 
-@app.route('/api/prescription', methods=['GET'])
+@app.route('/api/prescription', methods=['GET', 'OPTIONS'])
 def get_prescription():
+    # Handle preflight requests
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        return response
+        
     user_id = request.args.get('user_id')
     if not user_id:
         return jsonify({'error': 'user_id parameter is required'}), 400
     
-    # Get latest health data
-    conn = sqlite3.connect('health_data.db')
-    c = conn.cursor()
-    c.execute("SELECT heart_rate, oxygen_level, temperature FROM health_data WHERE user_id=? ORDER BY timestamp DESC LIMIT 1", 
-             (user_id,))
-    data = c.fetchone()
-    conn.close()
-    
-    if not data:
-        return jsonify({'error': 'No health data available'}), 404
-    
-    heart_rate, oxygen_level, temperature = data
-    
-    # Generate prescription based on thresholds
-    prescription = []
-    
-    if heart_rate > 100:
-        prescription.append("Your heart rate is elevated. Consider resting and consulting a doctor if it persists.")
-    elif heart_rate < 60:
-        prescription.append("Your heart rate is lower than normal. If you feel dizzy, consult a doctor.")
-    else:
-        prescription.append("Your heart rate is within normal range.")
-    
-    if oxygen_level < 95:
-        prescription.append(f"Your oxygen level is {oxygen_level}%, which is slightly low. Try deep breathing exercises.")
-    else:
-        prescription.append(f"Your oxygen level is {oxygen_level}%, which is excellent.")
-    
-    if temperature > 37.5:
-        prescription.append(f"Your temperature is {temperature}°C, indicating a fever. Stay hydrated and consider fever-reducing medication.")
-    elif temperature < 36.0:
-        prescription.append(f"Your temperature is {temperature}°C, which is lower than normal. Keep warm.")
-    else:
-        prescription.append(f"Your temperature is {temperature}°C, which is normal.")
-    
-    return jsonify({'prescription': "\n".join(prescription)})
+    try:
+        # Get latest health data
+        conn = sqlite3.connect('health_data.db')
+        c = conn.cursor()
+        c.execute("SELECT heart_rate, oxygen_level, temperature FROM health_data WHERE user_id=? ORDER BY timestamp DESC LIMIT 1", 
+                (user_id,))
+        data = c.fetchone()
+        conn.close()
+        
+        if not data:
+            return jsonify({'prescription': 'No health data available yet. Please wait for sensor readings.'}), 200
+        
+        heart_rate, oxygen_level, temperature = data
+        
+        # Generate prescription based on thresholds
+        prescription = []
+        
+        if heart_rate > 100:
+            prescription.append("Your heart rate is elevated. Consider resting and consulting a doctor if it persists.")
+        elif heart_rate < 60:
+            prescription.append("Your heart rate is lower than normal. If you feel dizzy, consult a doctor.")
+        else:
+            prescription.append("Your heart rate is within normal range.")
+        
+        if oxygen_level < 95:
+            prescription.append(f"Your oxygen level is {oxygen_level}%, which is slightly low. Try deep breathing exercises.")
+        else:
+            prescription.append(f"Your oxygen level is {oxygen_level}%, which is excellent.")
+        
+        if temperature > 37.5:
+            prescription.append(f"Your temperature is {temperature}°C, indicating a fever. Stay hydrated and consider fever-reducing medication.")
+        elif temperature < 36.0:
+            prescription.append(f"Your temperature is {temperature}°C, which is lower than normal. Keep warm.")
+        else:
+            prescription.append(f"Your temperature is {temperature}°C, which is normal.")
+        
+        return jsonify({'prescription': "\n".join(prescription)})
+    except Exception as e:
+        print(f"Error generating prescription: {e}")
+        return jsonify({'prescription': f"Error generating prescription. Please try again later."}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
-
-
-
-
-
-
-
-
-
-
-# print("hi")
-# from flask import Flask
-
-# app = Flask(__name__)
-
-
-# @app.route("/")
-# def home():
-#     return "Hello, World!"
-
-# @app.route("/greet/<name>")
-# def greet(name):
-#     return f"Hello, {name}!"
-# if __name__ == "_main_":
-#     app.run(debug=True)
-
-
-
-
-
-
-# from flask import Flask
-# app = Flask(__name__)
-# @app.route('/login', methods=['POST'])
-# def login():
-#     print("hlo")
-#     #   return "helo world"
-#     data = request.json
-#     email = data.get('email')
-#     password = data.get('password')
-#     conn = sqlite3.connect('health_data.db')
-#     c = conn.cursor()
-    
-#     c.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
-#     user = c.fetchone()
-#     conn.close()
-    
-#     if user:
-#         return jsonify({'success': True, 'user_id': user[0], 'fullname': user[3]})
-#     else:
-#         return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
-
-
-
-
-# @app.route("/")
-# def home():
-#     return "Hello, World!"
-
-# @app.route("/greet/<name>")
-# def greet(name):
-#     return f"Hello, {name}!"
-
-# if __name__ == "__main__":
-#     app.run(debug=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# from flask import Flask
-
-# print(">>> File is running")
-# app = Flask(__name__)
-
-# @app.route("/")
-# def home():
-#     print(">>> / endpoint was hit")
-#     return "Hello, Flask!"
-
-# if __name__ == "_main_":
-#     print(">>> Starting Flask app...")
-#     app.run(debug=True)
-
-
-
-# import logging
-# logging.basicConfig(level=logging.DEBUG)
-
-# from flask import Flask
-
-# print(">>> File is running")
-
-# app = Flask(__name__)
-
-# @app.route("/")
-# def home():
-#     print(">>> / endpoint was hit")
-#     return "Hello, Flask!"
-
-# if __name__ == "_main_":
-#     print(">>> Starting Flask app...")
-#     app.run(debug=True,port=5050)

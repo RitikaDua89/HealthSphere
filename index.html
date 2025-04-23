@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Health Monitoring System</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FIXED: Updated Chart.js import to a specific version -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 </head>
 <body>
 
     <!-- LOGIN FORM -->
-
     <div class="formcontainer container" id="loginForm" style="display: flex;">
         <div class="content1">
             <h1>Smart Health Monitoring System</h1>
@@ -27,13 +27,11 @@
         </div>
     </div>
 
-<!-- SIGN UP FORM -->
-
+    <!-- SIGN UP FORM -->
     <div class="formcontainer container" id="signupForm" style="display: none;">
         <div class="content">
             <h2>Create an Account</h2>
-            <!-- <form action="/signup" method="POST"> -->
-                <form method="POST">
+            <form method="POST">
                 <label for="fullname">Full Name:</label>
                 <input type="text" id="fullname" name="fullname" placeholder="Enter your full name" required>
                 <label for="signup-email">Email:</label>
@@ -50,52 +48,37 @@
         </div>
     </div>
 
-
-
-
-    <!-- Updated toggleForms() function to reference new IDs -->
-    <script>
-        function toggleForms() {
-            var login = document.getElementById('loginForm'); <!-- Corrected ID reference -->
-            var signupForm = document.getElementById('signupForm');
-
-            if (login.style.display === 'none') {
-                login.style.display = 'flex';
-                signupForm.style.display = 'none';
-            } else {
-                login.style.display = 'none';
-                signupForm.style.display = 'flex';
-            }
-        }
-    </script>
-
-
-
-
     <!-- Dashboard (Visible after login) -->
     <div id="dashboard" class="container" style="display:none;">
-        <h2>Patient Dashboard</h2>
-
+        <div class="dashboard-header">
+            <h2>Patient Dashboard</h2>
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </div>
+        
         <!-- Real-Time Health Data -->
         <div class="health-data">
             <h3>Health Data</h3>
             <p id="heartRate">Heart Rate: Loading...</p>
             <p id="temperature">Temperature: Loading...</p>
+            <p id="oxygenLevel">Oxygen Level: Loading...</p>
         </div>
-
+        
         <!-- Historical Data Chart -->
         <div class="chart-container">
             <h3>Health Trends</h3>
             <canvas id="healthChart"></canvas>
         </div>
-
+        
         <!-- Prescription -->
         <div class="prescription">
             <h3>Prescription</h3>
             <p id="prescriptionText">Loading...</p>
         </div>
-    </div>
+    </div>    
 
     <script src="script.js"></script>
 </body>
-</html>
+</html> 
+
+
+<!-- new -->

@@ -1,48 +1,21 @@
 
-// Updated login function
-loginForm.addEventListener("submit", async function(event) {
-    event.preventDefault();
-    
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
 
-    try {
-        const response = await fetch('http://localhost:5000/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, password })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            loginForm.style.display = "none";
-            dashboard.style.display = "block";
-            fetchData(data.user_id);  // Pass user_id to fetchData
-        } else {
-            alert(data.message || "Invalid username or password");
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert("Login failed. Please try again.");
-    }
-});
+
+
+//  new
 
 // Wait until the DOM is fully loaded
 document.addEventListener("DOMContentLoaded", function() {
-    const loginForm = document.getElementById("loginForm");
+    const loginForm = document.getElementById("login");
     const dashboard = document.getElementById("dashboard");
-    const loginBtn = document.getElementById("login");
-  
+    
     // Login form submission
-    loginBtn.addEventListener("submit", async function(event) {
+    loginForm.addEventListener("submit", async function(event) {
         event.preventDefault();
         
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
-  
+        
         try {
             const response = await fetch('http://localhost:5000/login', {
                 method: 'POST',
@@ -55,8 +28,13 @@ document.addEventListener("DOMContentLoaded", function() {
             const data = await response.json();
             
             if (data.success) {
-                loginForm.style.display = "none";
+                document.getElementById("loginForm").style.display = "none";
                 dashboard.style.display = "block";
+                
+                // Store the user_id in localStorage to prevent losing it on page reloads
+                localStorage.setItem('userId', data.user_id);
+                
+                // Start fetching data
                 fetchData(data.user_id);
             } else {
                 alert(data.message || "Invalid username or password");
@@ -64,24 +42,21 @@ document.addEventListener("DOMContentLoaded", function() {
         } catch (error) {
             console.error('Error:', error);
             alert("Login failed. Please try again.");
-         }
+        }
     });
   
-    // ====== ADD SIGNUP FORM SUBMISSION HERE ======
-    const signupForm = document.querySelector("#signupForm");
-    signupForm.addEventListener("submit", async function(event) {
+    // Signup form submission
+    const signupFormElement = document.querySelector("#signupForm form");
+    signupFormElement.addEventListener("submit", async function(event) {
         event.preventDefault();
         
-        const formData = new FormData(event.target);
-        const data = {
-            fullname: formData.get("fullname"),
-            email: formData.get("email"),
-            password: formData.get("password"),
-            "confirm-password": formData.get("confirm-password")
-        };
+        const fullname = document.getElementById("fullname").value;
+        const email = document.getElementById("signup-email").value;
+        const password = document.getElementById("signup-password").value;
+        const confirmPassword = document.getElementById("confirm-password").value;
         
         // Basic client-side validation
-        if (data.password !== data["confirm-password"]) {
+        if (password !== confirmPassword) {
             alert("Passwords don't match!");
             return;
         }
@@ -92,7 +67,12 @@ document.addEventListener("DOMContentLoaded", function() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    fullname,
+                    email,
+                    password,
+                    "confirm-password": confirmPassword
+                })
             });
             
             const result = await response.json();
@@ -104,105 +84,154 @@ document.addEventListener("DOMContentLoaded", function() {
                 alert(result.message || "Signup failed. Please try again.");
             }
         } catch (error) {
-            console.log('Error:', error);
+            console.error('Error:', error);
             alert("Signup failed. Please try again.");
         }
     });
-
-    // ====== END OF SIGNUP FORM SUBMISSION ======
-  
-    // Rest of your existing code...
-    function fetchData(userId) {
-      // ... existing fetchData implementation ...
-    }
-  
-    async function updateChart(userId) {
-      // ... existing updateChart implementation ...
-    }
-  
-    async function fetchPrescription(userId) {
-      // ... existing fetchPrescription implementation ...
-    }
-  });
-  
-  // Existing toggleForms function (keep this at the bottom)
-  function toggleForms() {
-      var login = document.getElementById('loginForm');
-      var signupForm = document.getElementById('signupForm');
-  
-      if (login.style.display === 'none') {
-          login.style.display = 'flex';
-          signupForm.style.display = 'none';
-      } else {
-          login.style.display = 'none';
-          signupForm.style.display = 'flex';
-      }
-  }
-
-
-// Updated fetchData function with real API calls
-// >>>>>>>>>>>Not working<<<<<<<<<<<<<<<<<<
-// async function fetchData(userId) {
-//     // Fetch real-time data every 3 seconds
-//     setInterval(async () => {
-//         try {
-//             // Get current health data
-//             const healthResponse = await fetch(`http://localhost:5000/api/health-data?user_id=${userId}`);
-//             const healthData = await healthResponse.json();
-            
-//             console.log("Health Data:", data);
-//             // Update display
-//             document.getElementById("heartRate").innerText = `Heart Rate: ${healthData.heart_rate} bpm`;
-//             document.getElementById("temperature").innerText = `Temperature: ${healthData.temperature} °C`;
-            
-//             // Get historical data for chart
-//             await updateChart(userId);
-            
-//             // Get prescription
-//             await fetchPrescription(userId);
-//         } catch (error) {
-//             console.error('Error fetching data:', error);
-//         }
-//     }, 3000);
-// }
- function fetchData(userId) {
-   
     
-    setInterval(async() => {
-        await fetch(`/api/health-data?user_id=${userId}`)
-        // await fetch(`http://127.0.0.1:5000/api/health-data?user_id=${userId}`)
-            .then(response => response.json())
-            .then(data => {
-                const heartRate = data.heart_rate;
-                const oxygenLevel = data.oxygen_level;
-                console.log(">>>>>>>>data<<<<<<<<<<<<", data);
+    // Check if user was logged in before page reload - FIXED: Only check when not already on a specific form
+    checkLoginStatus();
+});
 
-                // Update health data display
-                document.getElementById("heartRate").innerText = `Heart Rate: ${heartRate} bpm`;
-                document.getElementById("oxygenLevel").innerText = `Oxygen Level: ${oxygenLevel}%`;
+// Function to check login status - FIXED: Separated this to prevent loops
+function checkLoginStatus() {
+    const userId = localStorage.getItem('userId');
 
-                // Call function to fetch historical data and chart updates
-                updateChart(userId);
-                fetchPrescription(heartRate, oxygenLevel);  // Pass sensor data to get prescription
-            })
-            .catch(error => console.log('Error fetching health data:', error));
-    }, 3000);  // Update every 3 seconds
+    // Only continue if dashboard exists AND is visible
+    const dashboard = document.getElementById("dashboard");
+
+    if (!dashboard) {
+        console.warn("Dashboard not found. Skipping auto-login.");
+        return;
+    }
+
+    // Optional: you can also check if it's visible if needed
+    // if (dashboard.style.display === 'none') return;
+
+    if (userId) {
+        // Hide login form and show dashboard
+        document.getElementById("loginForm").style.display = "none";
+        dashboard.style.display = "block";
+        fetchData(userId);
+    }
 }
 
 
+// Function to fetch and update health data
+function fetchData(userId) {
+    // Ensure we have a valid userId
+    if (!userId) {
+        console.error("No user ID provided to fetchData");
+        return;
+    }
+    
+    // Immediate first fetch
+    fetchHealthData(userId);
+    
+    // FIXED: Clear any existing intervals before setting a new one
+    if (window.dataInterval) {
+        clearInterval(window.dataInterval);
+    }
+    
+    // Set interval for subsequent fetches
+    const dataInterval = setInterval(() => {
+        fetchHealthData(userId);
+    }, 5000)  // Update every 5 seconds - FIXED: Increased to reduce server load
+    
+    // Store the interval ID in case we need to clear it later
+    window.dataInterval = dataInterval;
+}
+
+// Separate function to fetch health data
+async function fetchHealthData(userId) {
+    try {
+        const response = await fetch(`http://localhost:5000/api/health-data?user_id=${userId}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("Health Data:", data);
+        
+        // Update health data display
+        const heartRateElement = document.getElementById("heartRate");
+        const tempElement = document.getElementById("temperature");
+        const oxygenElement = document.getElementById("oxygenLevel");
+        
+        if (heartRateElement) {
+            heartRateElement.innerText = `Heart Rate: ${data.heart_rate} bpm`;
+        }
+        
+        if (tempElement) {
+            tempElement.innerText = `Temperature: ${data.temperature} °C`;
+        }
+        
+        // Create oxygen element if not exists
+        if (!oxygenElement) {
+            const newOxygen = document.createElement("p");
+            newOxygen.id = "oxygenLevel";
+            newOxygen.innerText = `Oxygen Level: ${data.oxygen_level}%`;
+            document.querySelector(".health-data")?.appendChild(newOxygen);
+        } else {
+            oxygenElement.innerText = `Oxygen Level: ${data.oxygen_level}%`;
+        }
+        
+        
+        // FIXED: Now we call these sequentially with proper error handling for each
+        try {
+            await updateChart(userId);
+        } catch (chartError) {
+            console.error('Chart update failed:', chartError);
+        }
+        
+        try {
+            await fetchPrescription(userId);
+        } catch (prescriptionError) {
+            console.error('Prescription fetch failed:', prescriptionError);
+        }
+    } catch (error) {
+        console.error('Error fetching health data:', error);
+        // Don't show alerts for fetch errors as they'll be recurring
+        // Just update the display to show there's an issue
+        document.getElementById("heartRate").innerText = "Heart Rate: Connection error";
+        document.getElementById("temperature").innerText = "Temperature: Connection error";
+        
+        if (document.getElementById("oxygenLevel")) {
+            document.getElementById("oxygenLevel").innerText = "Oxygen Level: Connection error";
+        }
+    }
+}
 
 // Updated chart function
-
 async function updateChart(userId) {
     try {
         const response = await fetch(`http://localhost:5000/api/historical-data?user_id=${userId}&limit=10`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
-        const ctx = document.getElementById("healthChart").getContext("2d");
+        // Make sure we have a canvas element
+        const canvas = document.getElementById("healthChart");
+        if (!canvas) {
+            console.error("Canvas element 'healthChart' not found");
+            return;
+        }
         
-        // Destroy previous chart if it exists
-        if (window.healthChart) {
+        const ctx = canvas.getContext("2d");
+        
+        // FIXED: Destroy previous chart if it exists and has a destroy method
+        if (window.healthChart && typeof window.healthChart.destroy === 'function') {
             window.healthChart.destroy();
+        }
+        
+        // FIXED: Ensure we have actual data to display
+        if (!data.labels || data.labels.length === 0) {
+            console.log("No historical data available yet");
+            return;
         }
         
         window.healthChart = new Chart(ctx, {
@@ -244,6 +273,7 @@ async function updateChart(userId) {
         });
     } catch (error) {
         console.error('Error updating chart:', error);
+        throw error; // Re-throw to let caller handle it
     }
 }
 
@@ -251,9 +281,53 @@ async function updateChart(userId) {
 async function fetchPrescription(userId) {
     try {
         const response = await fetch(`http://localhost:5000/api/prescription?user_id=${userId}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
         const data = await response.json();
         document.getElementById("prescriptionText").innerText = data.prescription;
     } catch (error) {
         console.error('Error fetching prescription:', error);
+        document.getElementById("prescriptionText").innerText = "Prescription unavailable. Server connection error.";
+        throw error; // Re-throw to let caller handle it
     }
 }
+
+// Toggle between login and signup forms - FIXED: more robust implementation
+function toggleForms() {
+    var loginForm = document.getElementById('loginForm');
+    var signupForm = document.getElementById('signupForm');
+    var dashboard = document.getElementById('dashboard');
+
+    // Hide dashboard if it's showing
+    dashboard.style.display = 'none';
+
+    if (loginForm.style.display === 'none') {
+        loginForm.style.display = 'flex';
+        signupForm.style.display = 'none';
+    } else {
+        loginForm.style.display = 'none';
+        signupForm.style.display = 'flex';
+    }
+}
+
+// Add logout functionality
+function logout() {
+    localStorage.removeItem('userId');
+
+    if (window.dataInterval) {
+        clearInterval(window.dataInterval);
+        window.dataInterval = null;
+    }
+
+    if (window.healthChart && typeof window.healthChart.destroy === 'function') {
+        window.healthChart.destroy();
+        window.healthChart = null;
+    }
+
+    // Redirect to login page
+    window.location.href = "/";
+}
+
