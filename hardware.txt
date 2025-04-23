@@ -1,0 +1,42 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+const int GSR = A0; // GSR sensor pin
+int gsrValue = 0;
+
+// LCD: change address if needed (0x27 or 0x3F are common)
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void setup() {
+  Serial.begin(9600);
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print(" GSR Monitor ");
+  delay(1500);
+  lcd.clear();
+}
+
+void loop() {
+  gsrValue = analogRead(GSR);
+  Serial.print("GSR: ");
+  Serial.println(gsrValue);
+
+  lcd.setCursor(0, 0);
+  lcd.print("GSR: ");
+  lcd.print(gsrValue);
+  lcd.print("   "); // clear trailing digits
+
+  lcd.setCursor(0, 1);
+  lcd.print("State: ");
+  lcd.print(getStressLevel(gsrValue));
+  
+  delay(500);
+}
+
+// Determine stress level based on thresholds
+String getStressLevel(int value) {
+  if (value < 500) return "Relaxed ";
+  else if (value >= 500 && value <= 700) return "Normal  ";
+  else return "Stressed";
+}
